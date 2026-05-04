@@ -1,0 +1,116 @@
+asyncapi: 3.1.0
+info:
+  title: Бронирование парковочного места AsyncApi контракт
+  version: 1.0.0
+  description: >
+    Контракт для публикации событий об изменении статуса оплаты
+    бронирования парковочного места.
+
+defaultContentType: application/json
+
+servers:
+  rabbitmq:
+    host: rabbitmq.example.com
+    protocol: amqp
+    description: RabbitMQ брокер
+
+channels:
+  change_status:
+    address: change_status
+    messages:
+      paymentStatus:
+        $ref: '#/components/messages/paymentStatus'
+
+operations:
+  uploadPaymentStatus:
+    action: send
+    channel:
+      $ref: '#/channels/change_status'
+    summary: Сервис оплаты отправляет событие изменения статуса оплаты в RabbitMQ
+    messages:
+      - $ref: '#/channels/change_status/messages/paymentStatus'
+
+  submitPaymentStatus:
+    action: receive
+    channel:
+      $ref: '#/channels/change_status'
+    summary: Сервис уведомлений получает событие из RabbitMQ и отправляет уведомление пользователю
+    messages:
+      - $ref: '#/channels/change_status/messages/paymentStatus'
+
+components:
+  messages:
+    paymentStatus:
+      name: paymentStatus
+      title: Событие изменения статуса оплаты
+      summary: Публикуется после обработки результата транзакции по бронированию
+      contentType: application/json
+      headers:
+        type: object
+        required:
+          - messageId
+        properties:
+          messageId:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор сообщения
+            examples:
+              - "550e8400-e29b-41d4-a716-446655440000"
+      payload:
+        $ref: '#/components/schemas/payment_change_status'
+
+  schemas:
+    payment_change_status:
+      type: object
+      required:
+        - user_id
+        - reservation_id
+        - payment_id
+        - operation_id
+        - created_at
+        - status
+
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Идентификатор пользователя
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+
+        reservation_id:
+          type: string
+          format: uuid
+          description: Идентификатор бронирования
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+
+        payment_id:
+          type: string
+          format: uuid
+          description: Идентификатор платежа
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+
+        operation_id:
+          type: string
+          format: uuid
+          description: Идентификатор события
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+
+        created_at:
+          type: string
+          format: date-time
+          description: Время создания события
+          examples:
+            - "2026-01-01T00:00:00Z"
+
+        status:
+          type: string
+          enum:
+            - PAID
+            - FAILED
+            - CANCELLED
+            - EXPIRED
+          description: Cтатус оплаты

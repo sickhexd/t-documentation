@@ -1,8 +1,8 @@
 # Модели данных
 
-## Концептуальная модель (ERD)
+## Концептуальная модель
 
-**Обоснование связей:**
+### Основные связи
 1. Один пользователь может иметь только одну роль, но одна роль может принадлежать множеству пользователей.
 2. Один пользователь может оформить много броней парковочных мест.
 3. Одна бронь может включать много парковочных мест, одно парковочное место может иметь множество бронирований.
@@ -11,11 +11,9 @@
 6. Во множестве отчётов может отражаться один тариф.
 7. Один пользователь вносит множество изменений.
 
-*Диаграммы концептуальной, логической и физической моделей описаны в формате PlantUML в репозитории проекта.*
+## Физическая модель
 
-## Физическая модель (с типами данных)
-
-### Описание основных сущностей
+### Основные сущности
 
 #### Пользователи (`users`)
 | Атрибут | Тип | Описание |
@@ -59,5 +57,123 @@
 | `status` | VARCHAR(20) | Статус платежа |
 | `amount` | DECIMAL(10,2) | Стоимость платежа |
 
-#### Вспомогательные таблицы
+### Вспомогательные таблицы
+
 Включают в себя `roles` (роли пользователей), `analytics` (аналитические отчёты), `logs` (логи запросов системы) и `history_changes` (история изменений сущностей).
+
+## Диаграмма ER-модели
+
+```plantuml
+@startuml
+title Физическая модель
+
+entity "role_types" as role_types {
+  + role_type_id : SERIAL <<PK>>
+  --
+  role_type_name : VARCHAR(50)
+}
+
+entity "roles" as roles {
+  + role_id : SERIAL <<PK>>
+  --
+  role_name : VARCHAR(50)
+  role_type_id : SERIAL <<FK>>
+  description : TEXT
+}
+
+entity "users" as users {
+  + user_id : SERIAL <<PK>>
+  --
+  role_id : SERIAL <<FK>>
+  firstname : VARCHAR(50)
+  middlename : VARCHAR(50)
+  lastname : VARCHAR(50)
+  phone : VARCHAR(20)
+  email : VARCHAR(100)
+  password : VARCHAR(255)
+}
+
+entity "places" as places {
+  + place_id : SERIAL <<PK>>
+  --
+  place_number : VARCHAR(20)
+  status : VARCHAR(20)
+}
+
+entity "tariffs" as tariffs {
+  + tariff_id : SERIAL <<PK>>
+  --
+  tariff_name : VARCHAR(50)
+  amount_per_hour : DECIMAL(10,2)
+  description : TEXT
+  is_active : BOOLEAN
+}
+
+entity "reservations" as reservations {
+  + reservation_id : SERIAL <<PK>>
+  --
+  user_id : SERIAL  <<FK>>
+  place_id : SERIAL <<FK>>
+  tariff_id : SERIAL  <<FK>>
+  date_start : TIMESTAMP
+  date_end : TIMESTAMP
+  status : VARCHAR(20)
+  amount : DECIMAL(10,2)
+  created_at : TIMESTAMP
+}
+
+entity "reservation_places" as reservation_places {
+  + reservation_id : SERIAL <<PK,FK>>
+  + place_id : SERIAL <<PK,FK>>
+}
+
+entity "transactions" as transactions {
+  + transaction_id : SERIAL <<PK>>
+  --
+  reservation_id : INT <<FK>>
+  status : VARCHAR(20)
+  amount : DECIMAL(10,2)
+  reservation_date : TIMESTAMP
+}
+
+entity "logs" as logs {
+  + log_id : SERIAL <<PK>>
+  --
+  request_body : TEXT
+  responce_body : TEXT
+  request_date : TIMESTAMP
+}
+
+entity "analytics" as analytics {
+  + request_id : SERIAL <<PK>>
+  --
+  date_start : DATE
+  date_end : DATE
+  total_reservations : INT
+  total_amount : DECIMAL(10,2)
+  most_popular_tariff : SERIAL <<FK>>
+}
+
+entity "history_changes" as history {
+  + change_id SERIAL <<PK>>
+  --
+  entity_type ENUM
+  entity_id INT       
+  field_name: VARCHAR(100)
+  value_old TEXT
+  value_new TEXT
+  changed_by SERIAL <<FK>>
+  change_date TIMESTAMP
+}
+
+roles ||--|| role_types
+roles ||--|{ users
+users ||--|{ reservations
+places ||--|{ reservation_places
+reservation_places }|--|| reservations
+tariffs ||--|{ reservations
+reservations ||--|{ transactions
+analytics ||--|{ tariffs
+history ||--|{ users
+@enduml
+```

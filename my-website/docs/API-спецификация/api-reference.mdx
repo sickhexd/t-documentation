@@ -1,9 +1,12 @@
 # Описание API
 
-## Основные Use Case для API
+## Назначение API
+
 API спроектировано на основе двух Use Case: **UC-4 (Бронирование парковочного места)** и **UC-5 (Выбор тарифного плана)**.
 
-**Ссылка на диаграмму:** [unidraw.io/app/board/fdc421b2a9a05d69a657](https://unidraw.io/app/board/fdc421b2a9a05d69a657)
+## Связанная схема
+
+![](/img/img.png)
 
 ## Эндпоинты REST API
 
@@ -13,7 +16,7 @@ API спроектировано на основе двух Use Case: **UC-4 (Б
 | `GET` | `/api/parking/{place_id}/tariffs` | Получение доступных тарифов по выбранному месту |
 | `POST` | `/api/parking/reserve` | Бронирование парковочного места |
 
-### Коды ошибок
+## Коды ошибок
 
 | HTTP-код | Описание | Пример сообщения |
 |---|---|---|
@@ -23,16 +26,28 @@ API спроектировано на основе двух Use Case: **UC-4 (Б
 | `500` | Внутренняя ошибка сервера | `"Ошибка сервера. Попробуйте позже."` |
 | `503` | Сервис недоступен | `"Платёжная система недоступна"` |
 
+## Асинхронное взаимодействие
+
+### Схема взаимодействия
+
+```plantuml
+@startuml
+participant "Сервис оплаты" as PaymentService
+queue "RabbitMQ" as Broker
+participant "Сервис уведомлений" as NotificationService
+participant "Пользователь" as User
+
+PaymentService -> Broker : publish paymentStatus
+Broker --> NotificationService : paymentStatus
+NotificationService -> User : Уведомление о статусе оплаты
+
+@enduml
+```
+
+### AsyncAPI контракт
+
+📖 **[Визуализация AsyncAPI](/docs/API-спецификация/asyncapi-reference)** — просмотрите структуру брокера, канала, операций и сообщения.
+
 ## OpenAPI 3.0 Спецификация
-*См. полную спецификацию в формате YAML ниже:*
 
-<details>
-<summary>Развернуть спецификацию OpenAPI</summary>
-
-```yaml
-openapi: 3.0.1
-info:
-  title: API для бронирования парковочных мест
-  description: Спецификация API для бронирования парковочных мест и получения тарифов
-  version: 1.0.0
-# [Сюда вставляется полная OpenAPI спецификация из исходного документа]
+📖 **[Интерактивная документация API](/api-docs/)** — просмотрите полную спецификацию с примерами запросов и ответов.
