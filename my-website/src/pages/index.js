@@ -1,9 +1,16 @@
-import React from 'react';
-import {Redirect} from '@docusaurus/router';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import React, {useEffect} from 'react';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
 export default function Home() {
-  const introUrl = useBaseUrl('/docs/intro');
+  const {siteConfig} = useDocusaurusContext();
 
-  return <Redirect to={introUrl} />;
+  useEffect(() => {
+    const normalizedBaseUrl = siteConfig.baseUrl.endsWith('/')
+      ? siteConfig.baseUrl
+      : `${siteConfig.baseUrl}/`;
+
+    window.location.replace(`${normalizedBaseUrl}docs/intro`);
+  }, [siteConfig.baseUrl]);
+
+  return null;
 }
