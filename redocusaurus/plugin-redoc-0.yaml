@@ -1,0 +1,257 @@
+openapi: 3.0.1
+info:
+  title: API для бронирования парковочных мест
+  description: Спецификация API для бронирования парковочных мест и получения тарифов
+  version: 1.0.0
+servers:
+  - url: https://api.parking.example.com
+    description: Production server
+  - url: http://localhost:8080
+    description: Development server
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - error
+          description: Статус операции
+        message:
+          type: string
+          description: Сообщение об ошибке
+      example:
+        status: error
+        message: Ошибка при обработке запроса.
+    Parking:
+      type: object
+      properties:
+        place_Id:
+          type: integer
+          description: Идентификатор парковочного места
+        location:
+          type: string
+          description: Локация парковочного места
+        status:
+          type: string
+          enum:
+            - available
+            - disable
+          description: Статус парковочного места
+      example:
+        place_Id: 1
+        location: Gate A
+        status: available
+    Tariff:
+      type: object
+      properties:
+        tariff_id:
+          type: integer
+          description: Идентификатор тарифа
+        name:
+          type: string
+          description: Название тарифа
+        price_per_hour:
+          type: number
+          format: float
+          description: Цена за час
+      example:
+        tariff_id: 1
+        name: Стандарт
+        price_per_hour: 100
+    ReserveRequest:
+      type: object
+      properties:
+        idempotency-key:
+          type: string
+          format: uuid
+          description: Ключ идемпотентности
+        user_id:
+          type: string
+          format: uuid
+          description: Идентификатор пользователя
+        dateStart:
+          type: string
+          format: date
+          description: Дата начала бронирования
+        dateEnd:
+          type: string
+          format: date
+          description: Дата окончания бронирования
+        place_id:
+          type: integer
+          description: Идентификатор парковочного места
+        tariff_id:
+          type: integer
+          description: Идентификатор выбранного тарифа
+      required:
+        - idempotency-key
+        - user_id
+        - dateStart
+        - dateEnd
+        - place_id
+        - tariff_id
+      example:
+        idempotency-key: e52a6345-4f90-41a2-bbfc-c1ed9b1c5d2f
+        user_id: 123e4567-e89b-12d3-a456-426614174000
+        dateStart: '2026-01-01'
+        dateEnd: '2026-01-02'
+        place_id: 1
+        tariff_id: 1
+paths:
+  /api/parking:
+    get:
+      summary: Получение списка доступных парковочных мест
+      description: Получение доступных парковочных мест для выбранного временного интервала
+      tags:
+        - Парковочные места
+      parameters:
+        - name: dateStart
+          in: query
+          description: Дата начала бронирования
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: dateEnd
+          in: query
+          description: Дата окончания бронирования
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Список доступных парковочных мест
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dateStart:
+                    type: string
+                    format: date
+                  dateEnd:
+                    type: string
+                    format: date
+                  available_places:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Parking'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/parking/{place_id}/tariffs:
+    get:
+      summary: Получение доступных тарифов по выбранному месту
+      description: Получение тарифов для выбранного парковочного места
+      tags:
+        - Тарифы
+      parameters:
+        - name: place_id
+          in: path
+          description: Идентификатор парковочного места
+          required: true
+          schema:
+            type: integer
+        - name: dateStart
+          in: query
+          description: Дата начала бронирования
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: dateEnd
+          in: query
+          description: Дата окончания бронирования
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Список доступных тарифов для выбранного места
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tariff'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Не найдено тарифов для места
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/parking/reserve:
+    post:
+      summary: Бронирование парковочного места
+      description: Сохранение выбранного парковочного места и тарифа
+      tags:
+        - Бронирование
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReserveRequest'
+      responses:
+        '200':
+          description: Бронирование подтверждено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                      - error
+                    description: Статус операции
+                  message:
+                    type: string
+                    description: Сообщение о результате бронирования
+                example:
+                  status: success
+                  message: Бронирование успешно!
+        '400':
+          description: Ошибка бронирования
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Парковочное место или тариф не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
